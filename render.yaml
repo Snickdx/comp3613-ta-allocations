@@ -1,0 +1,32 @@
+# Render Blueprint for COMP 3613 ta-allocations starter (FastStart base).
+# Free web services sleep after inactivity. Free Postgres expires after 30 days.
+
+services:
+  - type: web
+    name: ta-allocations
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py init --no-drop && python manage.py run --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: ENV
+        value: production
+      - key: DATABASE_URI
+        fromDatabase:
+          name: ta-allocations-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CONFIG_PASSWORD
+        generateValue: true
+
+databases:
+  - name: ta-allocations-db
+    databaseName: taallocations
+    plan: free
+    region: oregon
+    postgresMajorVersion: "16"

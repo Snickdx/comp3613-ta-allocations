@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}LoadBoard{% endblock %}
+
+{% block content %}
+<div class="landing">
+  <div class="landing-grid" aria-hidden="true"></div>
+  <span class="landing-tick landing-tick-tl" aria-hidden="true"></span>
+  <span class="landing-tick landing-tick-tr" aria-hidden="true"></span>
+  <span class="landing-tick landing-tick-bl" aria-hidden="true"></span>
+  <span class="landing-tick landing-tick-br" aria-hidden="true"></span>
+
+  <header class="landing-nav">
+    <a class="brand-wordmark" href="{{ url_for('index_view') }}">LoadBoard</a>
+    <div class="landing-nav-actions">
+      {% if user_logged_in %}
+      <a class="btn-landing btn-landing-ghost" href="{{ app_home }}">Open board</a>
+      <a class="btn-landing btn-landing-ghost" href="{{ url_for('logout') }}">Sign out</a>
+      {% else %}
+      <a class="btn-landing btn-landing-ghost" href="{{ url_for('login_view') }}">Sign in</a>
+      <a class="btn-landing btn-landing-primary" href="{{ url_for('register_view') }}">Join</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="landing-hero">
+    <p class="landing-kicker">TA allocations</p>
+    <h1 class="brand-wordmark">LoadBoard</h1>
+    <p class="landing-lead">
+      Allocate teaching assistants to courses within weekly hour caps and the department budget — see every load before you commit it.
+    </p>
+    <ul class="landing-spec" aria-label="Capabilities">
+      <li>Hours caps</li>
+      <li>Budget tracking</li>
+      <li>Manual &amp; auto assign</li>
+    </ul>
+    <div class="landing-cta">
+      {% if user_logged_in %}
+      <a class="btn-landing btn-landing-primary" href="{{ app_home }}">Continue</a>
+      {% else %}
+      <a class="btn-landing btn-landing-primary" href="{{ url_for('register_view') }}">Create account</a>
+      <a class="btn-landing btn-landing-ghost" href="{{ url_for('login_view') }}">Sign in</a>
+      {% endif %}
+    </div>
+  </main>
+
+  <footer class="landing-foot">
+    After <code>python manage.py init</code>: hod / hod-dev
+  </footer>
+</div>
+{% endblock %}

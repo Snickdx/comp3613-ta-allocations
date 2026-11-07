@@ -1,0 +1,473 @@
+:root {
+  --brand-name: "LoadBoard";
+  --brand-bg: #0d2137;
+  --brand-surface: #eef2f6;
+  --brand-ink: #0f1b29;
+  --brand-muted: #64748b;
+  --brand-accent: #f0a202;
+  --brand-accent-ink: #1a1203;
+  --brand-accent-2: #3d6ea5;
+  --brand-sidebar: #0d2137;
+  --brand-sidebar-text: #b6c5d6;
+  --brand-font-display: "Chakra Petch", "Segoe UI", sans-serif;
+  --brand-font-body: "Public Sans", "Segoe UI", sans-serif;
+  --brand-radius: 0.2rem;
+  --grid-line: rgba(182, 197, 214, 0.09);
+  --grid-line-major: rgba(182, 197, 214, 0.16);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--brand-font-body);
+  color: var(--brand-ink);
+  background: var(--brand-bg);
+}
+
+a {
+  color: inherit;
+}
+
+.brand-wordmark {
+  font-family: var(--brand-font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* —— Landing —— */
+.landing {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  color: var(--brand-surface);
+  background: var(--brand-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Blueprint graph paper: fine 16px grid + major 80px lines */
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  animation: grid-fade 1.4s ease-out both;
+  pointer-events: none;
+}
+
+/* Corner tick marks (registration marks) */
+.landing-tick {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: var(--brand-accent);
+  border-style: solid;
+  border-width: 0;
+  animation: grid-fade 1.4s ease-out 0.2s both;
+  pointer-events: none;
+}
+
+.landing-tick-tl { top: 18px; left: 18px; border-top-width: 2px; border-left-width: 2px; }
+.landing-tick-tr { top: 18px; right: 18px; border-top-width: 2px; border-right-width: 2px; }
+.landing-tick-bl { bottom: 18px; left: 18px; border-bottom-width: 2px; border-left-width: 2px; }
+.landing-tick-br { bottom: 18px; right: 18px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.landing-nav,
+.landing-hero,
+.landing-foot {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem clamp(1.75rem, 5vw, 3.5rem) 1rem;
+}
+
+.landing-nav .brand-wordmark {
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  color: var(--brand-surface);
+  text-decoration: none;
+}
+
+.landing-nav-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2rem, 8vh, 5rem) clamp(1.75rem, 5vw, 3.5rem) 3rem;
+  max-width: 44rem;
+  animation: hero-rise 0.8s ease-out both;
+}
+
+.landing-kicker {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.1rem;
+  font-family: var(--brand-font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+}
+
+.landing-kicker::before {
+  content: "";
+  width: 2rem;
+  height: 2px;
+  background: var(--brand-accent);
+}
+
+.landing-hero .brand-wordmark {
+  font-size: clamp(3rem, 9.5vw, 5.6rem);
+  line-height: 0.95;
+  margin: 0 0 1.25rem;
+  color: #f7fafc;
+}
+
+.landing-lead {
+  font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--brand-surface) 80%, transparent);
+  margin: 0 0 2rem;
+  max-width: 33rem;
+}
+
+.landing-spec {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+  font-family: var(--brand-font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-sidebar-text);
+}
+
+.landing-spec li::before {
+  content: "+";
+  margin-right: 0.4rem;
+  color: var(--brand-accent);
+}
+
+.landing-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn-landing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.35rem;
+  border-radius: var(--brand-radius);
+  font-family: var(--brand-font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-landing-primary {
+  background: var(--brand-accent);
+  color: var(--brand-accent-ink);
+}
+
+.btn-landing-primary:hover {
+  background: color-mix(in srgb, var(--brand-accent) 88%, #fff);
+  color: var(--brand-accent-ink);
+}
+
+.btn-landing-ghost {
+  background: transparent;
+  color: var(--brand-surface);
+  border-color: color-mix(in srgb, var(--brand-sidebar-text) 55%, transparent);
+}
+
+.btn-landing-ghost:hover {
+  border-color: var(--brand-accent);
+  color: var(--brand-accent);
+}
+
+.landing-foot {
+  padding: 1.25rem clamp(1.75rem, 5vw, 3.5rem) 2.25rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--brand-surface) 52%, transparent);
+}
+
+.landing-foot code {
+  color: var(--brand-accent);
+  font-size: 0.8rem;
+}
+
+@keyframes grid-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-grid,
+  .landing-tick,
+  .landing-hero,
+  .app-main {
+    animation: none;
+  }
+}
+
+/* —— Auth —— */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+  background-color: var(--brand-bg);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.auth-panel {
+  position: relative;
+  width: min(420px, 100%);
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  border-radius: var(--brand-radius);
+  padding: 2rem 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--brand-ink) 14%, transparent);
+  border-top: 3px solid var(--brand-accent);
+}
+
+.auth-panel .brand-wordmark {
+  font-size: 1.6rem;
+  margin-bottom: 0.25rem;
+  color: var(--brand-ink);
+}
+
+.auth-panel .auth-tagline {
+  color: var(--brand-muted);
+  margin-bottom: 1.5rem;
+}
+
+.auth-panel .form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-muted);
+}
+
+.auth-panel .form-control {
+  border-radius: var(--brand-radius);
+  border-color: color-mix(in srgb, var(--brand-ink) 22%, transparent);
+}
+
+.auth-panel .form-control:focus {
+  border-color: var(--brand-accent-2);
+  box-shadow: none;
+  outline: 2px solid var(--brand-accent-2);
+  outline-offset: 1px;
+}
+
+.auth-panel .btn {
+  border-radius: var(--brand-radius);
+}
+
+.auth-panel .btn-primary {
+  background: var(--brand-accent);
+  border-color: var(--brand-accent);
+  color: var(--brand-accent-ink);
+  font-family: var(--brand-font-display);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-panel .btn-primary:hover {
+  background: color-mix(in srgb, var(--brand-accent) 88%, #000);
+  border-color: color-mix(in srgb, var(--brand-accent) 88%, #000);
+  color: var(--brand-accent-ink);
+}
+
+.auth-panel .btn-outline-secondary {
+  color: var(--brand-ink);
+  border-color: color-mix(in srgb, var(--brand-ink) 25%, transparent);
+}
+
+.auth-panel .btn-outline-secondary:hover {
+  background: var(--brand-ink);
+  border-color: var(--brand-ink);
+  color: var(--brand-surface);
+}
+
+.auth-back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--brand-muted);
+  text-decoration: none;
+}
+
+.auth-back:hover {
+  color: var(--brand-accent-2);
+}
+
+/* —— App shell —— */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--brand-surface);
+  background-image:
+    linear-gradient(rgba(15, 27, 41, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 27, 41, 0.045) 1px, transparent 1px);
+  background-size: 16px 16px;
+  color: var(--brand-ink);
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem clamp(1rem, 3vw, 2rem);
+  background: var(--brand-sidebar);
+  color: var(--brand-surface);
+  border-bottom: 2px solid var(--brand-accent);
+}
+
+.app-topbar .brand-wordmark {
+  font-size: 1.05rem;
+  text-decoration: none;
+  color: var(--brand-accent);
+}
+
+.app-topnav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+
+.app-topnav a {
+  text-decoration: none;
+  color: var(--brand-sidebar-text);
+}
+
+.app-topnav a:hover,
+.app-topnav a.is-active {
+  color: var(--brand-accent);
+}
+
+.app-topnav span {
+  padding-left: 1rem;
+  border-left: 1px solid color-mix(in srgb, var(--brand-sidebar-text) 35%, transparent);
+  font-family: var(--brand-font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-surface);
+}
+
+.app-main {
+  flex: 1;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  animation: hero-rise 0.45s ease-out both;
+}
+
+.app-main h1 {
+  font-family: var(--brand-font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+}
+
+.app-main p {
+  color: var(--brand-muted);
+  margin: 0 0 1.25rem;
+  max-width: 40rem;
+}
+
+.app-main code {
+  color: var(--brand-accent-2);
+}
+
+.app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.app-actions a {
+  display: inline-flex;
+  padding: 0.6rem 1rem;
+  border-radius: var(--brand-radius);
+  text-decoration: none;
+  font-family: var(--brand-font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--brand-ink);
+  color: var(--brand-surface);
+  border: 1px solid var(--brand-ink);
+}
+
+.app-actions a:hover {
+  background: var(--brand-accent-2);
+  border-color: var(--brand-accent-2);
+}
+
+.app-actions a.secondary {
+  background: transparent;
+  color: var(--brand-ink);
+  border: 1px solid color-mix(in srgb, var(--brand-ink) 30%, transparent);
+}
+
+.app-actions a.secondary:hover {
+  border-color: var(--brand-accent-2);
+  color: var(--brand-accent-2);
+}
