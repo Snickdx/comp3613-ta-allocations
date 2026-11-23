@@ -37,12 +37,12 @@ def seed(*, reset: bool = False) -> None:
             )
         )
 
-        for name, email in [
-            ("Alex TA", "alex@example.com"),
-            ("Blair TA", "blair@example.com"),
-            ("Casey TA", "casey@example.com"),
+        for name, email, skills in [
+            ("Alex TA", "alex@example.com", "python,software engineering"),
+            ("Blair TA", "blair@example.com", "sql,databases"),
+            ("Casey TA", "casey@example.com", "python,intro programming"),
         ]:
-            session.add(Ta(name=name, email=email))
+            session.add(Ta(name=name, email=email, skills=skills))
 
         for code, title, hours in [
             ("COMP3613", "Software Engineering II", 30),
