@@ -14,10 +14,14 @@ from app.models.department import Department
 from app.models.ta import Ta
 from app.models.ta_experience import TaExperience
 from app.services.allocation_auth import get_user
+from app.services.capacity_guard import CapacityGuard
 from app.services.constants import WEEKLY_HOUR_CAP
+from app.services.ranking.candidate import Candidate
 from app.services.strategies import MODES, auto_select_ta
 
 _RR_CURSOR = 0
+
+guard = CapacityGuard()
 
 
 def _now() -> str:
@@ -59,6 +63,12 @@ def _experience_set(session: Session) -> set[tuple[int, int]]:
 def _budget_remaining(session: Session) -> int:
     dept = session.get(Department, 1)
     return int(dept.budget_hours_remaining)
+
+
+def _candidate(session: Session, ta: Ta, course_id: int) -> Candidate:
+    experienced = (ta.id, course_id) in _experience_set(session)
+    used = _load_by_ta(session).get(ta.id, 0)
+    return Candidate(ta, experienced, used)
 
 
 def ta_remaining_hours(ta_id: int) -> int:
@@ -105,12 +115,12 @@ def assign_manual(
         if not ta or not course:
             return {"ok": False, "error": "ta or course not found"}
 
-        load = _load_by_ta(session).get(ta_id, 0)
-        # DEFECT: manual path warns in payload but still inserts when over cap
-        over_cap = load + weekly_hours > WEEKLY_HOUR_CAP
         dept = session.get(Department, 1)
-        budget = int(dept.budget_hours_remaining)
-        over_budget = weekly_hours > budget
+        problem = guard.problem(
+            _candidate(session, ta, course_id), weekly_hours, dept.budget_hours_remaining
+        )
+        if problem:
+            return {"ok": False, "error": problem}
 
         row = Assignment(
             ta_id=ta_id,
@@ -119,20 +129,13 @@ def assign_manual(
             created_at=_now(),
         )
         session.add(row)
-        if not over_budget:
-            dept.budget_hours_remaining = dept.budget_hours_remaining - weekly_hours
-            session.add(dept)
-        # DEFECT: if over_budget still inserts assignment without decrementing
+        dept.budget_hours_remaining -= weekly_hours
+        session.add(dept)
         session.commit()
         session.refresh(row)
         assignment = row.model_dump()
 
-    return {
-        "ok": True,
-        "assignment": assignment,
-        "over_cap": over_cap,
-        "over_budget": over_budget,
-    }
+    return {"ok": True, "assignment": assignment}
 
 
 def assign_auto(
