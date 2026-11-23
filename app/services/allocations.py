@@ -11,17 +11,26 @@ from app.database import engine
 from app.models.assignment import Assignment
 from app.models.course import Course
 from app.models.department import Department
+from app.models.suggestion import Suggestion
 from app.models.ta import Ta
 from app.models.ta_experience import TaExperience
 from app.services.allocation_auth import get_user
 from app.services.capacity_guard import CapacityGuard
 from app.services.constants import WEEKLY_HOUR_CAP
 from app.services.ranking.candidate import Candidate
-from app.services.strategies import MODES, auto_select_ta
-
-_RR_CURSOR = 0
+from app.services.ranking.experience_first import ExperienceFirstStrategy
+from app.services.ranking.least_loaded import LeastLoadedStrategy
+from app.services.ranking.registry import StrategyRegistry
+from app.services.ranking.round_robin import RoundRobinStrategy
 
 guard = CapacityGuard()
+
+registry = StrategyRegistry()
+registry.register(ExperienceFirstStrategy())
+registry.register(LeastLoadedStrategy())
+registry.register(RoundRobinStrategy())
+
+MODES = tuple(registry.names())
 
 
 def _now() -> str:
@@ -69,6 +78,23 @@ def _candidate(session: Session, ta: Ta, course_id: int) -> Candidate:
     experienced = (ta.id, course_id) in _experience_set(session)
     used = _load_by_ta(session).get(ta.id, 0)
     return Candidate(ta, experienced, used)
+
+
+def _all_candidates(session: Session, course_id: int) -> list[Candidate]:
+    exp = _experience_set(session)
+    load = _load_by_ta(session)
+    result = []
+    for ta in session.exec(select(Ta).order_by(Ta.id)).all():
+        result.append(Candidate(ta, (ta.id, course_id) in exp, load.get(ta.id, 0)))
+    return result
+
+
+def _save_assignment(session: Session, ta_id: int, course_id: int, hours: int, dept: Department):
+    row = Assignment(ta_id=ta_id, course_id=course_id, weekly_hours=hours, created_at=_now())
+    session.add(row)
+    dept.budget_hours_remaining -= hours
+    session.add(dept)
+    return row
 
 
 def ta_remaining_hours(ta_id: int) -> int:
@@ -122,15 +148,7 @@ def assign_manual(
         if problem:
             return {"ok": False, "error": problem}
 
-        row = Assignment(
-            ta_id=ta_id,
-            course_id=course_id,
-            weekly_hours=weekly_hours,
-            created_at=_now(),
-        )
-        session.add(row)
-        dept.budget_hours_remaining -= weekly_hours
-        session.add(dept)
+        row = _save_assignment(session, ta_id, course_id, weekly_hours, dept)
         session.commit()
         session.refresh(row)
         assignment = row.model_dump()
@@ -138,52 +156,106 @@ def assign_manual(
     return {"ok": True, "assignment": assignment}
 
 
-def assign_auto(
-    hod_id: int, *, course_id: int, weekly_hours: int, mode: str
-) -> dict[str, Any]:
-    global _RR_CURSOR
+def suggest(hod_id: int, *, course_id: int, weekly_hours: int, mode: str) -> dict[str, Any]:
     user = get_user(hod_id)
     if not user or user["role"] != "hod":
         return {"ok": False, "error": "hod only"}
-    if mode not in MODES:
-        # still call strategy — demonstrates fallback defect
-        pass
+    if weekly_hours <= 0:
+        return {"ok": False, "error": "hours must be positive"}
+    try:
+        strategy = registry.get(mode)
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
 
     with Session(engine) as session:
-        course_row = session.get(Course, course_id)
-        if course_row is None:
+        course = session.get(Course, course_id)
+        if course is None:
             return {"ok": False, "error": "course not found"}
-        course = course_row.model_dump()
-        tas = [t.model_dump() for t in session.exec(select(Ta).order_by(Ta.id)).all()]
-        exp = _experience_set(session)
-        load = _load_by_ta(session)
+
         budget = _budget_remaining(session)
+        eligible = guard.filter(_all_candidates(session, course_id), weekly_hours, budget)
+        ranked = strategy.rank(course, eligible)
+        if len(ranked) == 0:
+            return {"ok": False, "error": "no TA fits within the weekly cap and the budget"}
 
-    pick = auto_select_ta(
-        mode=mode,
-        course=course,
-        tas=tas,
-        experience=exp,
-        load_by_ta=load,
-        budget_remaining=budget,
-        hours=weekly_hours,
-        round_robin_cursor=_RR_CURSOR,
-    )
-    if not pick.get("ok"):
-        return pick
-    if "next_cursor" in pick:
-        _RR_CURSOR = int(pick["next_cursor"])
+        row = Suggestion(
+            course_id=course_id,
+            weekly_hours=weekly_hours,
+            mode=mode,
+            ranked_ta_ids=",".join(str(c.ta_id) for c in ranked),
+            created_at=_now(),
+        )
+        session.add(row)
+        session.commit()
+        session.refresh(row)
 
-    # Persist via manual path (inherits its defects)
-    result = assign_manual(
-        hod_id,
-        ta_id=pick["ta_id"],
-        course_id=course_id,
-        weekly_hours=weekly_hours,
-    )
-    if result.get("ok"):
-        result["auto"] = pick
-    return result
+        return {
+            "ok": True,
+            "suggestion_id": row.id,
+            "course_id": course_id,
+            "weekly_hours": weekly_hours,
+            "mode": mode,
+            "ranked": [c.to_dict() for c in ranked],
+        }
+
+
+def confirm(hod_id: int, *, suggestion_id: int, ta_id: int) -> dict[str, Any]:
+    user = get_user(hod_id)
+    if not user or user["role"] != "hod":
+        return {"ok": False, "error": "hod only"}
+
+    with Session(engine) as session:
+        sug = session.get(Suggestion, suggestion_id)
+        if sug is None:
+            return {"ok": False, "error": "suggestion not found"}
+        if sug.confirmed_ta_id is not None:
+            return {"ok": False, "error": "suggestion already confirmed"}
+
+        ranked = sug.ranked_ids()
+        if ta_id not in ranked:
+            return {"ok": False, "error": "TA is not in this suggestion"}
+
+        ta = session.get(Ta, ta_id)
+        dept = session.get(Department, 1)
+
+        # hours or budget may have changed since suggest, so check again
+        problem = guard.problem(
+            _candidate(session, ta, sug.course_id), sug.weekly_hours, dept.budget_hours_remaining
+        )
+        if problem:
+            return {"ok": False, "error": "limits changed since suggest: " + problem}
+
+        row = _save_assignment(session, ta_id, sug.course_id, sug.weekly_hours, dept)
+        sug.confirmed_ta_id = ta_id
+        sug.override = ta_id != ranked[0]
+        sug.confirmed_at = _now()
+        session.add(sug)
+        session.commit()
+        session.refresh(row)
+
+        return {
+            "ok": True,
+            "assignment": row.model_dump(),
+            "suggestion_id": sug.id,
+            "override": sug.override,
+        }
+
+
+def get_suggestion(suggestion_id: int) -> dict[str, Any] | None:
+    with Session(engine) as session:
+        row = session.get(Suggestion, suggestion_id)
+        if row is None:
+            return None
+        return row.model_dump()
+
+
+def assign_auto(hod_id: int, *, course_id: int, weekly_hours: int, mode: str) -> dict[str, Any]:
+    # one click version: suggest, then confirm the top TA
+    sug = suggest(hod_id, course_id=course_id, weekly_hours=weekly_hours, mode=mode)
+    if not sug["ok"]:
+        return sug
+    top_ta = sug["ranked"][0]["ta_id"]
+    return confirm(hod_id, suggestion_id=sug["suggestion_id"], ta_id=top_ta)
 
 
 def review_board() -> dict[str, Any]:

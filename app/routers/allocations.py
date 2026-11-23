@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.services import allocation_auth as auth
 from app.services import allocations
-from app.services.strategies import MODES
+from app.services.allocations import MODES
 
 router = APIRouter(tags=["ta-allocations"])
 
@@ -29,6 +29,17 @@ class AutoAssignBody(BaseModel):
     course_id: int
     weekly_hours: int
     mode: str = Field(description=" | ".join(MODES))
+
+
+class SuggestBody(BaseModel):
+    course_id: int
+    weekly_hours: int
+    mode: str = Field(description=" | ".join(MODES))
+
+
+class ConfirmBody(BaseModel):
+    suggestion_id: int
+    ta_id: int
 
 
 def _actor_id(x_user_id: str | None) -> int:
@@ -101,3 +112,34 @@ def auto(
     if not result.get("ok"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     return result
+
+
+@router.post("/assignments/suggest")
+def suggest(body: SuggestBody, x_user_id: str | None = Header(default=None)) -> dict[str, Any]:
+    result = allocations.suggest(
+        _actor_id(x_user_id),
+        course_id=body.course_id,
+        weekly_hours=body.weekly_hours,
+        mode=body.mode,
+    )
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    return result
+
+
+@router.post("/assignments/confirm")
+def confirm(body: ConfirmBody, x_user_id: str | None = Header(default=None)) -> dict[str, Any]:
+    result = allocations.confirm(
+        _actor_id(x_user_id), suggestion_id=body.suggestion_id, ta_id=body.ta_id
+    )
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    return result
+
+
+@router.get("/suggestions/{suggestion_id}")
+def suggestion(suggestion_id: int) -> dict[str, Any]:
+    row = allocations.get_suggestion(suggestion_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="suggestion not found")
+    return {"suggestion": row}
