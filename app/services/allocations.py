@@ -273,10 +273,24 @@ def review_board() -> dict[str, Any]:
         }
         for t in tas
     ]
+    by_course = []
+    for c in courses:
+        rows = [a for a in assignments if a["course_id"] == c["id"]]
+        by_course.append(
+            {
+                "course_id": c["id"],
+                "code": c["code"],
+                "title": c["title"],
+                "hours_assigned": sum(a["weekly_hours"] for a in rows),
+                "assignments": rows,
+            }
+        )
     return {
         "courses": courses,
         "assignments": assignments,
+        "by_course": by_course,
         "tas": ta_view,
+        "budget_hours_used": sum(a["weekly_hours"] for a in assignments),
         "budget_hours_remaining": budget,
         "weekly_hour_cap": WEEKLY_HOUR_CAP,
     }
